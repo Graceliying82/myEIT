@@ -16,7 +16,7 @@ A 3D Electrical Impedance Tomography (EIT) simulator for visualizing electric fi
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/myEIT.git
+git clone https://github.com/Graceliying82/myEIT.git
 cd myEIT
 
 # Create virtual environment
