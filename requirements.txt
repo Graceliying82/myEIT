@@ -1,0 +1,6 @@
+pyEIT
+vispy
+numpy
+scipy
+matplotlib
+PyQt6
