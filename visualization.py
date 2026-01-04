@@ -56,6 +56,15 @@ class EITVisualizer:
         self.view.camera.set_range(x=(-1.5, 1.5), y=(-1.5, 1.5), z=(-1.0, 1.0))
     
     def _create_catheter(self):
+        # 1. Create Heart Shell (Static)
+        # Large sphere representing the heart chamber
+        # Note: VisPy Mesh with alpha requires depth testing/order tricks sometimes.
+        # We'll try a simple translucent sphere.
+        self.heart_shell = scene.visuals.Sphere(radius=0.6, color=(1, 0, 0, 0.2), edge_color='red', parent=self.view.scene)
+        self.heart_shell.transform = scene.transforms.MatrixTransform()
+        self.heart_shell.transform.translate((0, 0, 0.4)) # Center heart slightly up in Z
+        
+        # 2. Create Catheter (Moving)
         # Create a vertical tube/cylinder for the catheter
         # Define points along the catheter (vertical line)
         # Offset to start above ground level

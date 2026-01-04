@@ -43,29 +43,32 @@ class EITSimulator:
         """ Update catheter position and recalculate fields """
         self.catheter_pos = [x, y]
         
-        # Generate anomaly
-        anomaly = PyEITAnomaly_Circle(center=[x, y], r=self.catheter_radius, perm=self.conductivity_catheter)
+        # Generate Anomaly
+        # 1. Heart (Static background organ)
+        # Large region with higher conductivity (e.g. blood)
+        heart_radius = 0.6
+        heart_perm = 1.5
+        
+        # 2. Catheter (Moving)
+        catheter_perm = self.conductivity_catheter
         
         # Calculate new permittivity mapping on mesh
         # We start with background
         perm = np.full(self.mesh_obj.element.shape[0], self.conductivity_bg)
         
-        # Apply anomaly
-        # PyEIT mesh coordinates are in mesh_obj.node
-        # Elements are defined by indices in mesh_obj.element
-        # We need to find elements inside the anomaly
-        
         pts = self.mesh_obj.node
         tri = self.mesh_obj.element
-        
-        # Calculate centroids of triangles to determine if they are inside the anomaly
-        # shape (N_el, 3, 2) -> mean -> (N_el, 2)
         centroids = np.mean(pts[tri], axis=1)
         
-        # Check distance
-        dist = np.sqrt((centroids[:, 0] - x)**2 + (centroids[:, 1] - y)**2)
-        mask = dist <= self.catheter_radius
-        perm[mask] = self.conductivity_catheter
+        # Apply Heart Anomaly
+        dist_heart = np.sqrt(centroids[:, 0]**2 + centroids[:, 1]**2)
+        mask_heart = dist_heart <= heart_radius
+        perm[mask_heart] = heart_perm
+        
+        # Apply Catheter Anomaly (overrides heart if they overlap)
+        dist_catheter = np.sqrt((centroids[:, 0] - x)**2 + (centroids[:, 1] - y)**2)
+        mask_catheter = dist_catheter <= self.catheter_radius
+        perm[mask_catheter] = catheter_perm
         
         self.current_perm = perm
         
