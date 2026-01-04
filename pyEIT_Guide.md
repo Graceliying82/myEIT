@@ -78,25 +78,90 @@ v1 = f1.v  # Frame voltages with anomaly
 
 The Inverse Problem estimates the internal conductivity distribution (`perm`) given the boundary voltage measurements (`v1`) and the baseline (`v0`).
 
-### Algorithms Available:
-1.  **JAC (Jacobian / Gauss-Newton)**: Iterative or one-step linearized reconstruction. Good for static imaging.
-2.  **BP (Back Projection)**: Simple, fast, heuristic method. Low resolution but robust.
-3.  **GREIT (Graz consensus Reconstruction Algorithm for EIT)**: Optimized for 2D lung EIT. standard in medical applications.
+### 1. JAC (Jacobian / Gauss-Newton)
 
-### Example: Using JAC (Jacobian)
+**What it is:**
+A linearized reconstruction method. It approximates the non-linear EIT problem by calculating a Jacobian matrix (sensitivity matrix) that relates small changes in conductivity to changes in voltage.
 
+**Pros:**
+- Good for difference imaging (time difference).
+- Mathematically rigorous for small perturbations.
+- Highly configurable regularization (Tikhonov, NOSER).
+
+**Cons:**
+- Susceptible to noise if regularization is not tuned.
+- Assumes linearity (valid only for small changes).
+
+**Usage:**
 ```python
 from pyeit.eit.jac import JAC
 
-# Initialize Reconstruction Solver
+# 1. Initialize
 eit = JAC(mesh_obj, protocol_obj)
-eit.setup(p=0.5, lamb=0.001, method="kotre")
 
-# Reconstruct
-# ds is the delta conductivity (or difference image)
+# 2. Setup (Tune Parameters)
+# p: Power for NOSER regularization
+# lamb: Regularization parameter (higher = smoother, lower = sharper but noisier)
+eit.setup(p=0.5, lamb=0.01, method="kotre")
+
+# 3. Solve
+# v1: Measurement, v0: Baseline
 ds = eit.solve(v1, v0, normalize=True)
+```
 
-# 'ds' is now a vector of conductivity changes for each mesh element
+### 2. BP (Back Projection)
+
+**What it is:**
+A heuristic method originally derived for X-ray CT but adapted for EIT. It projects the voltage differences back along the equipotential lines.
+
+**Pros:**
+- Extremely fast.
+- Robust against some types of noise.
+- Simple to understand and implement.
+
+**Cons:**
+- Low spatial resolution (images look "smeared" or "star-like").
+- Not quantitative (values don't represent true conductivity).
+
+**Usage:**
+```python
+from pyeit.eit.bp import BP
+
+# 1. Initialize
+eit = BP(mesh_obj, protocol_obj)
+eit.setup(weight="none")
+
+# 2. Solve
+ds = eit.solve(v1, v0, normalize=True)
+```
+
+### 3. GREIT (Graz consensus Reconstruction Algorithm for EIT)
+
+**What it is:**
+A modern algorithm designed to standardize lung EIT. It uses a training dataset to optimize a reconstruction matrix that minimizes error in resolution, shape, and noise.
+
+**Pros:**
+- High quality, uniform resolution.
+- Optimized for biological shapes (lungs).
+- Standard in clinical research.
+
+**Cons:**
+- Complex setup (requires training).
+- Slower initialization (but fast reconstruction once trained).
+
+**Usage:**
+```python
+from pyeit.eit.greit import GREIT
+
+# 1. Initialize
+eit = GREIT(mesh_obj, protocol_obj)
+
+# 2. Setup (Training)
+# This Step generates a training dataset and learns the matrix (takes time)
+eit.setup(p=0.50, lamb=0.01)
+
+# 3. Solve
+ds = eit.solve(v1, v0, normalize=True)
 ```
 
 ---
