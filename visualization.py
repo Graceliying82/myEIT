@@ -56,15 +56,7 @@ class EITVisualizer:
         self.view.camera.set_range(x=(-1.5, 1.5), y=(-1.5, 1.5), z=(-1.0, 1.0))
     
     def _create_catheter(self):
-        # 1. Create Heart Shell (Static)
-        # Large sphere representing the heart chamber
-        # Note: VisPy Mesh with alpha requires depth testing/order tricks sometimes.
-        # We'll try a simple translucent sphere.
-        self.heart_shell = scene.visuals.Sphere(radius=0.6, color=(1, 0, 0, 0.2), edge_color='red', parent=self.view.scene)
-        self.heart_shell.transform = scene.transforms.MatrixTransform()
-        self.heart_shell.transform.translate((0, 0, 0.4)) # Center heart slightly up in Z
-        
-        # 2. Create Catheter (Moving)
+        # 1. Create Catheter (Moving) - Draw Opaque Object FIRST
         # Create a vertical tube/cylinder for the catheter
         # Define points along the catheter (vertical line)
         # Offset to start above ground level
@@ -73,15 +65,22 @@ class EITVisualizer:
         catheter_points[:, 2] = np.linspace(0.1, 0.1 + self.catheter_length, n_points)
         
         # Create Tube visual without shading
+        # Change color to BLUE for better contrast inside red heart
         self.catheter_marker = scene.visuals.Tube(
             points=catheter_points,
             radius=self.catheter_radius,
-            color='red',
+            color='blue', 
             tube_points=8,
             shading=None,
             parent=self.view.scene
         )
         self.catheter_marker.transform = scene.transforms.MatrixTransform()
+
+        # 2. Create Heart Shell (Static) - Draw Transparent Object LAST
+        # Large sphere representing the heart chamber
+        self.heart_shell = scene.visuals.Sphere(radius=0.6, color=(1, 0, 0, 0.1), edge_color='red', parent=self.view.scene)
+        self.heart_shell.transform = scene.transforms.MatrixTransform()
+        self.heart_shell.transform.translate((0, 0, 0.4)) # Center heart slightly up in Z
 
     def update_plot(self, perm, catheter_pos, rotation=(0, 0, 0)):
         # Keep mesh a constant blue color (no impedance visualization)
