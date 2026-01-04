@@ -50,8 +50,8 @@ class EITVisualizer:
         # Add coordinate axes for reference
         scene.visuals.XYZAxis(parent=self.view.scene)
         
-        # Set camera range
-        self.view.camera.set_range(x=(-1.5, 1.5), y=(-1.5, 1.5), z=(-0.5, 0.5))
+        # Set camera range (expanded Z for vertical movement)
+        self.view.camera.set_range(x=(-1.5, 1.5), y=(-1.5, 1.5), z=(-1.0, 1.0))
 
     def update_plot(self, perm, catheter_pos):
         # Normalize perm to [0, 1] for colormap
@@ -75,9 +75,12 @@ class EITVisualizer:
             face_colors=face_colors
         )
         
-        # Update Catheter Marker position
+        # Update Catheter Marker position (now with full 3D position)
+        cx = float(catheter_pos[0])
+        cy = float(catheter_pos[1])
+        cz = float(catheter_pos[2]) if len(catheter_pos) > 2 else 0.1
         self.catheter_marker.transform.reset()
-        self.catheter_marker.transform.translate((float(catheter_pos[0]), float(catheter_pos[1]), 0.1))
+        self.catheter_marker.transform.translate((cx, cy, cz))
         
         # Force canvas update
         self.canvas.update()
