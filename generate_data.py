@@ -34,7 +34,7 @@ def generate_synthetic_data(filename="eit_data.csv", steps=100):
     # Let's check type. If complex, taking absolute value (magnitude) is standard for simple dynamic imaging.
     is_complex = np.iscomplexobj(v_init)
     
-    header = ['index', 'x', 'y', 'z'] + [f'v_{i}' for i in range(len(v_init))]
+    header = ['timestamp', 'index', 'x', 'y', 'z'] + [f'v_{i}' for i in range(len(v_init))]
     
     with open(filename, 'w', newline='') as f:
         writer = csv.writer(f)
@@ -45,6 +45,9 @@ def generate_synthetic_data(filename="eit_data.csv", steps=100):
             cy = y_traj[i]
             cz = z_traj[i]
             
+            # Simulate time (e.g. 0.05s per step = 20 FPS)
+            sim_time = i * 0.05
+            
             v, _ = sim.update_catheter(cx, cy, cz)
             
             # Process voltage
@@ -53,7 +56,7 @@ def generate_synthetic_data(filename="eit_data.csv", steps=100):
             else:
                 v_data = v
                 
-            row = [i, cx, cy, cz] + list(v_data)
+            row = [sim_time, i, cx, cy, cz] + list(v_data)
             writer.writerow(row)
             
             if i % 10 == 0:

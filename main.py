@@ -1,7 +1,9 @@
 
 import sys
+import sys
 import argparse
 import csv
+import time
 import numpy as np
 from simulator import EITSimulator
 from visualization import EITVisualizer
@@ -43,8 +45,10 @@ class MyEITApp:
             # Write Header (same format as generate_data.py)
             # Need to know voltage size. Get simulated voltage size first.
             v_init, _ = self.sim.update_catheter(0, 0, 0)
-            header = ['index', 'x', 'y', 'z'] + [f'v_{i}' for i in range(len(v_init))]
+            header = ['timestamp', 'index', 'x', 'y', 'z'] + [f'v_{i}' for i in range(len(v_init))]
             self.record_writer.writerow(header)
+            
+            self.record_start_time = time.time()
             
         except Exception as e:
             print(f"Error opening file for recording: {e}")
@@ -79,12 +83,37 @@ class MyEITApp:
             with open(filename, 'r') as f:
                 reader = csv.reader(f)
                 header = next(reader) # Skip header
-                # Expected format: index, x, y, z, v...
+                # Expected format: timestamp, index, x, y, z, v...
+                # Check if timestamp exists (backward compatibility)
+                has_timestamp = 'timestamp' in header[0] if header else False
+                
+                start_ofs = 0
+                if has_timestamp:
+                    start_ofs = 1 # Shift index by 1 if timestamp is col 0
+                else:
+                    print("Warning: No timestamp found in CSV. Replay will be fixed speed.")
+                
                 for row in reader:
                     if not row: continue
-                    # Parse position (x, y, z) - columns 1, 2, 3
-                    x, y, z = float(row[1]), float(row[2]), float(row[3])
-                    self.replay_data.append((x, y, z))
+                    # Parse data
+                    # timestamp = float(row[0]) if has_timestamp else 0.0
+                    # x, y, z = float(row[1+ofs]), ...
+                    
+                    if has_timestamp:
+                        ts = float(row[0])
+                        x = float(row[2]) # timestamp, index, x, y, z
+                        y = float(row[3])
+                        z = float(row[4])
+                        self.replay_data.append({'t': ts, 'pos': (x,y,z)})
+                    else:
+                        # Old format: index, x, y, z
+                        x = float(row[1])
+                        y = float(row[2])
+                        z = float(row[3])
+                        # Synthetic timestamp (0.05s per frame)
+                        ts = len(self.replay_data) * 0.05 
+                        self.replay_data.append({'t': ts, 'pos': (x,y,z)})
+
         except Exception as e:
             print(f"Error loading file: {e}")
             sys.exit(1)
@@ -92,23 +121,41 @@ class MyEITApp:
         print(f"Loaded {len(self.replay_data)} frames. MODE: REPLAY")
         print("Press Esc to Quit.")
         
-        # Setup Animation Timer (20 FPS)
-        self.timer = app.Timer(interval=0.05, connect=self.on_timer, start=True)
+        self.replay_start_time = time.time()
+        # Setup Animation Timer (High frequency to catch frames correctly)
+        self.timer = app.Timer(interval=0.01, connect=self.on_timer, start=True)
 
     def on_timer(self, event):
         if not self.replay_data: return
         
+        # Calculate elapsed playback time
+        current_time = time.time()
+        elapsed = current_time - self.replay_start_time
+        
+        # Find the latest frame that should be shown (timestamp <= elapsed)
+        # We start searching from current index to be efficient
+        while self.replay_index < len(self.replay_data) - 1:
+            next_frame = self.replay_data[self.replay_index + 1]
+            if next_frame['t'] <= elapsed:
+                self.replay_index += 1
+            else:
+                break
+        
+        # Check if we reached end
+        if self.replay_index >= len(self.replay_data) - 1:
+            # Loop playback
+            self.replay_index = 0
+            self.replay_start_time = time.time()
+        
         # Get current frame data
-        x, y, z = self.replay_data[self.replay_index]
+        frame = self.replay_data[self.replay_index]
+        x, y, z = frame['pos']
         
         # Run physics update with recorded position
         v, perm = self.sim.update_catheter(x, y, z)
         
         # Update Visualization
         self.viz.update_plot(perm, [x, y, z], rotation=(0, 0, 0))
-        
-        # Loop playback
-        self.replay_index = (self.replay_index + 1) % len(self.replay_data)
 
     def on_key_press(self, event):
         # Global keys
@@ -159,7 +206,9 @@ class MyEITApp:
 
         # If recording, save frame
         if self.record_mode and self.record_writer:
-            row = [self.record_frame_index, self.cx, self.cy, self.cz] + list(v_data)
+            current_time = time.time()
+            elapsed = current_time - self.record_start_time
+            row = [elapsed, self.record_frame_index, self.cx, self.cy, self.cz] + list(v_data)
             self.record_writer.writerow(row)
             self.record_frame_index += 1
         
