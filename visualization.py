@@ -34,12 +34,12 @@ class EITVisualizer:
         n_faces = len(self.faces)
         initial_colors = np.full((n_faces, 3), [0.3, 0.5, 0.8], dtype=np.float32)
         
-        # Create MeshVisual with flat shading for cleaner look
+        # Create MeshVisual without shading (no shadows)
         self.mesh_visual = scene.visuals.Mesh(
             vertices=self.vertices_3d,
             faces=self.faces,
             face_colors=initial_colors,
-            shading='flat',
+            shading=None,
             parent=self.view.scene
         )
         
@@ -72,7 +72,7 @@ class EITVisualizer:
         )
         self.catheter_marker.transform = scene.transforms.MatrixTransform()
 
-    def update_plot(self, perm, catheter_pos):
+    def update_plot(self, perm, catheter_pos, rotation=(0, 0, 0)):
         # Normalize perm to [0, 1] for colormap
         p_min, p_max = perm.min(), perm.max()
         if p_max - p_min < 1e-6:
@@ -94,11 +94,17 @@ class EITVisualizer:
             face_colors=face_colors
         )
         
-        # Update Catheter Marker position (now with full 3D position)
+        # Update Catheter Marker position and rotation
         cx = float(catheter_pos[0])
         cy = float(catheter_pos[1])
         cz = float(catheter_pos[2]) if len(catheter_pos) > 2 else 0.1
+        
+        # Apply rotation (twist) then translation
+        rx, ry, rz = rotation  # rotation angles in degrees
         self.catheter_marker.transform.reset()
+        self.catheter_marker.transform.rotate(rx, (1, 0, 0))  # Pitch
+        self.catheter_marker.transform.rotate(ry, (0, 1, 0))  # Yaw
+        self.catheter_marker.transform.rotate(rz, (0, 0, 1))  # Roll/Twist
         self.catheter_marker.transform.translate((cx, cy, cz))
         
         # Force canvas update
