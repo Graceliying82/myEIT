@@ -34,24 +34,43 @@ class EITVisualizer:
         n_faces = len(self.faces)
         initial_colors = np.full((n_faces, 3), [0.3, 0.5, 0.8], dtype=np.float32)
         
-        # Create MeshVisual
+        # Create MeshVisual with flat shading for cleaner look
         self.mesh_visual = scene.visuals.Mesh(
             vertices=self.vertices_3d,
             faces=self.faces,
             face_colors=initial_colors,
-            shading=None,  # Disable shading to avoid normal computation issues
+            shading='flat',
             parent=self.view.scene
         )
         
-        # Add Catheter Marker (Sphere)
-        self.catheter_marker = scene.visuals.Sphere(radius=0.08, color='red', parent=self.view.scene)
-        self.catheter_marker.transform = scene.transforms.MatrixTransform()
+        # Create linear catheter (Tube) - vertical line
+        # Catheter is a thin cylinder pointing upward
+        self.catheter_length = 0.4
+        self.catheter_radius = 0.02
+        self._create_catheter()
         
         # Add coordinate axes for reference
         scene.visuals.XYZAxis(parent=self.view.scene)
         
         # Set camera range (expanded Z for vertical movement)
         self.view.camera.set_range(x=(-1.5, 1.5), y=(-1.5, 1.5), z=(-1.0, 1.0))
+    
+    def _create_catheter(self):
+        # Create a vertical tube/cylinder for the catheter
+        # Define points along the catheter (vertical line)
+        n_points = 10
+        catheter_points = np.zeros((n_points, 3), dtype=np.float32)
+        catheter_points[:, 2] = np.linspace(0, self.catheter_length, n_points)
+        
+        # Create Tube visual
+        self.catheter_marker = scene.visuals.Tube(
+            points=catheter_points,
+            radius=self.catheter_radius,
+            color='red',
+            tube_points=8,
+            parent=self.view.scene
+        )
+        self.catheter_marker.transform = scene.transforms.MatrixTransform()
 
     def update_plot(self, perm, catheter_pos):
         # Normalize perm to [0, 1] for colormap
