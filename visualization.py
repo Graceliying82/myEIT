@@ -58,9 +58,10 @@ class EITVisualizer:
     def _create_catheter(self):
         # Create a vertical tube/cylinder for the catheter
         # Define points along the catheter (vertical line)
+        # Offset to start above ground level
         n_points = 10
         catheter_points = np.zeros((n_points, 3), dtype=np.float32)
-        catheter_points[:, 2] = np.linspace(0, self.catheter_length, n_points)
+        catheter_points[:, 2] = np.linspace(0.1, 0.1 + self.catheter_length, n_points)
         
         # Create Tube visual without shading
         self.catheter_marker = scene.visuals.Tube(
@@ -74,26 +75,9 @@ class EITVisualizer:
         self.catheter_marker.transform = scene.transforms.MatrixTransform()
 
     def update_plot(self, perm, catheter_pos, rotation=(0, 0, 0)):
-        # Normalize perm to [0, 1] for colormap
-        p_min, p_max = perm.min(), perm.max()
-        if p_max - p_min < 1e-6:
-            norm_perm = np.zeros(len(perm), dtype=np.float32)
-        else:
-            norm_perm = ((perm - p_min) / (p_max - p_min)).astype(np.float32)
-        
-        # Create colormap and get face colors
-        cmap = Colormap(['#0066CC', '#00CCCC', '#FFCC00', '#FF3300'])
-        face_colors_rgba = cmap.map(norm_perm)
-        
-        # Use only RGB (first 3 channels), ensure float32
-        face_colors = np.ascontiguousarray(face_colors_rgba[:, :3], dtype=np.float32)
-        
-        # Update mesh with new colors
-        self.mesh_visual.set_data(
-            vertices=self.vertices_3d,
-            faces=self.faces,
-            face_colors=face_colors
-        )
+        # Keep mesh a constant blue color (no impedance visualization)
+        n_faces = len(self.faces)
+        face_colors = np.full((n_faces, 3), [0.3, 0.5, 0.8], dtype=np.float32)
         
         # Update Catheter Marker position and rotation
         cx = float(catheter_pos[0])
