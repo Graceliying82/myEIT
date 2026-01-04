@@ -166,6 +166,34 @@ ds = eit.solve(v1, v0, normalize=True)
 
 ---
 
+## 6. FAQ: Field Maps and Impedance Tracking
+
+**Q: "I heard for impedance tracking, you need a Field Map. What is that?"**
+
+A **Field Map** (often called a Sensitivity Map or Jacobian) describes how the electric field behaves inside the volume. Specifically, it tells you: *"If conductivity changes at point (x,y), how much does the voltage change at electrode pair (i,j)?"*
+
+In mathematical terms, this is the **Jacobian Matrix (J)**.
+
+### Why don't we need it explicitly in this Simulator?
+
+It depends on what you are doing:
+
+1.  **Forward Simulation (What we are mostly doing):**
+    *   We act as "God". We **know** where the catheter is (x, y, z).
+    *   We tell the physics engine (`pyeit.eit.fem`): "Put an anomaly here."
+    *   The engine calculates the voltages.
+    *   **Result**: We generate data *from* the truth. The "Map" is implicitly handled by the FEM mesh solver.
+
+2.  **Impedance Tracking (Inverse Problem):**
+    *   This is what a real system does. It **measures** voltages and needs to **find** the catheter.
+    *   To do this, it needs a **Field Map (Model)** to reverse-engineer the position.
+    *   It asks: "I see a voltage change on Electrode 1-2. According to my Field Map, that means the catheter is likely near the top-left."
+
+**Summary:**
+*   **Simulator (Forward)**: Position -> Voltage (Field Map is hidden in physics engine).
+*   **Tracker (Inverse)**: Voltage -> Position (Field Map is REQUIRED to solve this).
+
+If you were to implement a "Find Catheter" feature in this project that takes *only* the voltages and guesses the position, you would absolutely need to use the `JAC` or `GREIT` solvers, which calculate and use this Field Map!
 ## 5. Visualization (`pyeit.eit.interp2d`)
 
 Visualizing the reconstructed data typically involves interpolating the mesh data onto a regular grid (image).
