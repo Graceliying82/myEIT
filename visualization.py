@@ -62,12 +62,13 @@ class EITVisualizer:
         catheter_points = np.zeros((n_points, 3), dtype=np.float32)
         catheter_points[:, 2] = np.linspace(0, self.catheter_length, n_points)
         
-        # Create Tube visual
+        # Create Tube visual without shading
         self.catheter_marker = scene.visuals.Tube(
             points=catheter_points,
             radius=self.catheter_radius,
             color='red',
             tube_points=8,
+            shading=None,
             parent=self.view.scene
         )
         self.catheter_marker.transform = scene.transforms.MatrixTransform()
